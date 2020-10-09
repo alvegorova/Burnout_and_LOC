@@ -6,10 +6,14 @@ rm(list = ls())
 ## DOWNLOADING LIBRARIES
 
 install.packages(c("psych", "ggplot2"))
+install.packages("wesanderson") #to use wesanderson colors
 require(psych)
 require(ggplot2)
 require(dplyr)
+require(tidyr)
 require(foreign) #to use "read.spss"
+require(wesanderson)
+
 
 ## DOWNLOADING DATA
 
@@ -36,6 +40,17 @@ names(dataset)[names(dataset) == 'stage_sch'] <- 'Experience_last'
 names(dataset)[names(dataset) == 'Eitimia'] <- 'Euthymia'
 names(dataset)[names(dataset) == 'Distimia'] <- 'Dysthymia'
 
+#edditing subject info
+dataset$Subject <- factor(dataset$speciality1, labels = c('Math and engineering', 'Natural sciences', 'Humanities', 'Physical'))
+levels(dataset$Subject) <- c(levels(dataset$Subject),'Kindegarden','Not provided')
+dataset$Subject[75] <- 'Humanities'
+dataset$Subject[c(3,4,21,22,91)] <- 'Kindegarden'
+dataset$Subject[c(41,44,45,47,49,52,73,86)] <- 'Not provided'
+
+#making SD varidables more readable
+names(dataset)[names(dataset) == 'SD_St_Tyajeliy'] <- 'Student_Heavy'
+#ADD_THE_REST!
+
 #creating variable with three levels of Burnout
 dataset$Burnout_three_groups <- factor (dataset$Burnout_three_groups,
                                levels=c(1,2,3),
@@ -51,6 +66,29 @@ dataset <- mutate (dataset, LOC_prof_groups = ifelse(dataset$LOC_prof<7, 1, 2))
 dataset$LOC_prof_groups <- factor (dataset$LOC_prof_groups,
                                levels=c(1,2),
                                labels=c("External", "Internal"))
+
+#Editing format of numeric variables
+dataset$N <- as.integer(dataset$N)
+dataset$LOC_gen <- as.integer(dataset$LOC_gen)
+dataset$LOC_prof <- as.integer(dataset$LOC_prof)
+dataset$Euthymia <- as.integer(dataset$Euthymia)
+dataset$Dysthymia <- as.integer(dataset$Dysthymia)
+dataset$Depression <- as.integer(dataset$Depression)
+dataset$Anxiety <- as.integer(dataset$Anxiety)
+dataset$Em_exhaustion <- as.integer(dataset$Em_exhaustion)
+dataset$Depersonalization <- as.integer(dataset$Depersonalization)
+dataset$Successfulness <- as.integer(dataset$Successfulness)
+dataset$Burnout <- as.integer(dataset$Burnout)
+
+#Why this does not work?!:  
+#dataset <- dataset %>% as.integer(N, LOC_gen, LOC_prof,
+#           Euthymia, Dysthymia, Depression, Anxiety,
+#           Em_exhaustion, Depersonalization, Successfulness, 
+#           Burnout)
+
+#keeping table with sd
+dataset_with_sd <- dataset
+
 #choosing important variables
 dataset <- dataset %>% 
   select (N, Age, Gender, Experience_gen, Experience_last, 
@@ -60,80 +98,106 @@ dataset <- dataset %>%
           Em_exhaustion, Depersonalization, Successfulness, 
           Burnout, Burnout_two_groups, Burnout_three_groups)
 
-as.integer(N, LOC_gen, LOC_prof,
-           Euthymia, Dysthymia, Depression, Anxiety,
-           Em_exhaustion, Depersonalization, Successfulness, 
-           Burnout)
-
 #to overview the data
 str(dataset)
 View(dataset)
+
+#Count missing data
+colSums(is.na(dataset)) 
 
 ## DESCRIPTIVE STATISTICS
 
 #general description of the participants
 lapply(dataset[, c("Age", "Gender", "Experience_gen", "LOC_gen", "LOC_prof", "Burnout")], table)
 
-#calculate the number of participans in each LOC_prof/Burnout group
-xtabs (~ LOC_prof_groups + Burnout_three_groups, data=dataset)
+#histogram with age and gender
+dataset %>% filter (!is.na(Age)) %>% 
+  ggplot(aes(Age, fill=Gender)) + 
+  geom_histogram(alpha = 0.8, position = "stack") + 
+  scale_fill_grey() + theme_classic()
 
+#bar with teaching subject
+dataset %>% filter (!is.na(Age)) %>% 
+  ggplot(aes(Subject)) + 
+  geom_bar(alpha = 0.8, position = "stack") + 
+  scale_fill_grey() + theme_classic()
+#Does not work:
+# install.packages("treemap", dependencies = TRUE)
+# library(treemap)
+# treemap(dataset$Subject, index="cat", vSize="pct", vColor="col", type="color")
+
+#bar with work experience
+dataset %>% filter (!is.na(Age)) %>% 
+  ggplot(aes(Experience_gen)) + 
+  geom_histogram(alpha = 0.8, position = "stack") + 
+  scale_fill_grey() + theme_classic()
+
+#calculate the number of participans in each LOC_prof/Burnout group
+#xtabs (~ LOC_prof_groups + Burnout_three_groups, data=dataset)
+xtabs (~ LOC_gen_groups + Burnout_three_groups, data=dataset)
+
+#How many participants are Externals
+xtabs (~ (LOC_gen<22)+ Burnout_three_groups, data=dataset)
+
+#Create new dataset with Standardized Dep and Standardized Suc (and Suc is inverted)
+dataset_new <- dataset
+dataset_new <- dataset_new %>% mutate (Dep_stand = scale(Depersonalization))
+dataset_new <- dataset_new %>% mutate (Suc_stand = scale(Successfulness))
+dataset_new$Successfulness <- dataset_new$Successfulness*(-1)
+
+#How in Internals changes Dep in dif levels of burnout
+dataset %>% filter (LOC_gen>22) %>%
+ggplot(aes(Depersonalization))+
+  geom_boxplot() + 
+  facet_wrap(~Burnout_three_groups)
+  scale_color_grey() + theme_classic()
+
+#How in Internals changes Suc in dif levels of burnout
+  dataset %>% filter (LOC_gen>22) %>%
+    ggplot(aes(Successfulness))+
+    geom_boxplot() + 
+    facet_wrap(~Burnout_three_groups)
+  scale_color_grey() + theme_classic()
+
+#Create second stage of DP+RP development
+#Invert RP
+  
+dayasey %>% filter ()
+ggplot(aes(x=Burnout, col=LOC_gen_groups)) + 
+  geom_point() +
+  geom_line() + theme_classic()
+  
+  
+## ANALYSIS
+ggplot(dataset, 
+       aes(x=Burnout, col=LOC_gen_groups))+ 
+  geom_density()+ 
+  scale_colour_brewer(palette='Set3')
+
+#Compare Internals and Externals
 #Depersonalization in different LOC_prof level vs. Burnout level
-dataset %>% filter (!is.na(LOC_prof_groups) & (!is.na(Depersonalization)) & 
+dataset %>% filter (!is.na(LOC_gen_groups) & (!is.na(Depersonalization)) & 
                       (!is.na(Burnout_three_groups))) %>% 
-  ggplot(aes(Depersonalization, fill = LOC_prof_groups)) + 
+  ggplot(aes(Depersonalization, fill = LOC_gen_groups)) + 
   geom_density(alpha = 0.4) + facet_grid (Burnout_three_groups~.)
 
 #Successfulness in different LOC_prof level vs. Burnout level
-dataset %>% filter (!is.na(LOC_prof_groups) & (!is.na(Successfulness)) & 
+dataset %>% filter (!is.na(LOC_gen_groups) & (!is.na(Successfulness)) & 
                       (!is.na(Burnout_three_groups))) %>% 
-  ggplot(aes(Successfulness, fill = LOC_prof_groups)) + 
+  ggplot(aes(Successfulness, fill = LOC_gen_groups)) + 
   geom_density(alpha = 0.4) + facet_grid (Burnout_three_groups~.)
 
-#наверно это будет не нужно
-#calculate mean Depers in dif LOC
-aggregate(dataset$Depersonalization, by = list(dataset$LOC_prof), FUN=mean)
-
-#наверно это будет не нужно
-#means in Dep in dif LOC vs dif Burnout
-table (dataset$LOC_prof, dataset$Burnout_three_groups)
-as.data.frame (table (dataset$LOC_prof, dataset$Burnout_three_groups))
-aggregate(dataset$Depersonalization, 
-          by = list(dataset$LOC_prof, dataset$Burnout_three_groups), FUN=mean) 
-
-table (dataset$LOC_prof, dataset$Depersonalization, dataset$Burnout_three_groups)
-mosaicplot (table 
-            (dataset$LOC_prof, dataset$Burnout_three_groups))
-
-#Count missing data
-colSums(is.na(dataset)) 
-
-
 ## Plots with Depers in dif LOC vs dif Burnout
-
-ggplot(dataset, 
-       aes(x=LOC_prof_groups, y=Depersonalization, col=Burnout_three_groups))+
-  geom_boxplot()
-
-ggplot(dataset, 
-       aes(x=Burnout_three_groups, y=Depersonalization, col=LOC_prof_groups))+
-  geom_boxplot()
-
-ggplot(dataset, 
-       aes(x=Burnout_three_groups, y=Depersonalization, col=LOC_prof_groups))+
-  geom_point()
-
 ggplot(dataset, 
        aes(x=Burnout_three_groups, y=Depersonalization, col=LOC_gen_groups))+
-  geom_boxplot()
+  geom_boxplot() + 
+  geom_jitter(width = 0.1, alpha = 0.2) +
+  scale_color_grey() + theme_classic()
 
 ggplot(dataset, 
-       aes(x=Burnout, col=LOC_prof_groups))+ 
-  geom_density()+ 
-  scale_colour_brewer(palette='Set1')
-
-ggplot(dataset, 
-       aes(x=Burnout_three_groups, y=Successfulness, col=LOC_prof_groups))+
-  geom_boxplot()
+       aes(x=Burnout_three_groups, y=Successfulness, col=LOC_gen_groups))+
+  geom_boxplot() + 
+  scale_color_grey() + theme_classic()
 
 #Plots with dinamics of Successfulness and Depers during Burnout in dif LOC
 ##Successfulness in Internal
@@ -224,7 +288,7 @@ sum(dataset$LOC_prof>6 & dataset$Burnout_three_groups == 1)
 sum (dataset$LOC_prof<7 & dataset$Burnout_three_groups == 3)
 sum (dataset$LOC_prof>6 & dataset$Burnout_three_groups == 3)
 
-#Groups
+#Groups PROF
 External_Burn_1 <- subset (dataset, 
                            dataset$LOC_prof<7 & dataset$Burnout_three_groups == 1)
 Internal_Burn_1 <- subset (dataset, 
@@ -240,7 +304,7 @@ External_Burn_3 <- subset (dataset,
 Internal_Burn_3 <- subset (dataset, 
                            dataset$LOC_prof>6 & dataset$Burnout_three_groups == 3)
 
-#or this way
+#or this way PROF
 dataset %>% mutate (Group = ifelse(dataset$LOC_prof<7 & dataset$Burnout_three_groups == 1, External_Burn_1,
                                    ifelse(dataset$LOC_prof>6 & dataset$Burnout_three_groups == 1, Internal_Burn_1,
                                           ifelse(dataset$LOC_prof<7 & dataset$Burnout_three_groups == 2, External_Burn_2,
@@ -276,6 +340,40 @@ wilcox.test(External_Burn_3$Depersonalization, Internal_Burn_3$Depersonalization
 wilcox.test(External_Burn_2$Successfulness, Internal_Burn_2$Successfulness, paired=FALSE)
 wilcox.test(External_Burn_1$Successfulness, Internal_Burn_1$Successfulness, paired=FALSE)
 wilcox.test(External_Burn_3$Successfulness, Internal_Burn_3$Successfulness, paired=FALSE)
+
+#Groups GEN
+GExternal_Burn_1 <- subset (dataset, 
+                           dataset$LOC_gen_groups=="External" & dataset$Burnout_three_groups == "Burnout_low")
+GInternal_Burn_1 <- subset (dataset, 
+                           dataset$LOC_gen_groups=="Internal" & dataset$Burnout_three_groups == "Burnout_low")
+
+GExternal_Burn_2 <- subset (dataset, 
+                           dataset$LOC_gen_groups=="External" & dataset$Burnout_three_groups == "Burnout_medium")
+GInternal_Burn_2 <- subset (dataset, 
+                           dataset$LOC_gen_groups=="Internal" & dataset$Burnout_three_groups == "Burnout_medium")
+
+GExternal_Burn_3 <- subset (dataset, 
+                           dataset$LOC_gen_groups=="External" & dataset$Burnout_three_groups == "Burnout_high")
+GInternal_Burn_3 <- subset (dataset, 
+                           dataset$LOC_gen_groups=="Internal" & dataset$Burnout_three_groups == "Burnout_high")
+
+
+#or this way GEN
+dataset2 <- dataset %>% mutate (Group = ifelse(dataset$LOC_gen<31 & dataset$Burnout_three_groups == 1, GExternal_Burn_1,
+                                   ifelse(dataset$LOC_gen>30 & dataset$Burnout_three_groups == 1, GInternal_Burn_1,
+                                          ifelse(dataset$LOC_gen<31 & dataset$Burnout_three_groups == 2, GExternal_Burn_2,
+                                                 ifelse(dataset$LOC_gen>30 & dataset$Burnout_three_groups == 2, GInternal_Burn_2,
+                                                        ifelse(dataset$LOC_gen<31 & dataset$Burnout_three_groups == 3, GExternal_Burn_3, "GInternal_Burn_3"))))))
+
+#Mann-Whitney GEN
+wilcox.test(GExternal_Burn_2$Depersonalization, GInternal_Burn_2$Depersonalization, paired=FALSE)
+wilcox.test(GExternal_Burn_1$Depersonalization, GInternal_Burn_1$Depersonalization, paired=FALSE)
+wilcox.test(GExternal_Burn_3$Depersonalization, GInternal_Burn_3$Depersonalization, paired=FALSE)
+
+wilcox.test(GExternal_Burn_2$Successfulness, GInternal_Burn_2$Successfulness, paired=FALSE)
+wilcox.test(GExternal_Burn_1$Successfulness, GInternal_Burn_1$Successfulness, paired=FALSE)
+wilcox.test(GExternal_Burn_3$Successfulness, GInternal_Burn_3$Successfulness, paired=FALSE)
+
 
 #multiple regression: Depersonalization ~ Burnout + LOC
 
@@ -321,4 +419,67 @@ summary(lm(Successfulness ~ Depersonalization, data=dataset_Burn_high))
 dataset_Burn_low <- dataset %>% filter (Burnout_three_groups=="Burnout_low") 
 summary(lm(Successfulness ~ Depersonalization, data=dataset_Burn_low)) 
 
+#Semantic differential
+dataset_with_sd_MB <- dataset_with_sd %>% 
+  filter (Burnout_three_groups=='Burnout_medium')
+
+dataset_with_sd_MB_Ex <- dataset_with_sd_MB %>% 
+  filter (LOC_gen_groups=="External")
+
+dataset_with_sd_MB_In <- dataset_with_sd_MB %>% 
+  filter (LOC_gen_groups=="Internal")
+
+SD_col <- colnames(dataset_with_sd_MB) [colnames(dataset_with_sd_MB) %>% startsWith("SD_")]
+dataset_with_sd_MB_piv <- pivot_longer(dataset_with_sd_MB, SD_col, names_to = c("Object","Scale"), 
+             names_prefix = "SD_", names_sep = "_", values_to = "SD_value", values_drop_na =TRUE)
+
+dataset_with_sd_MB_piv %>% 
+  ggplot(aes(SD_value, fill=Object)) + 
+  geom_density(alpha = 0.8, position = "identity") + 
+  facet_grid(Scale~LOC_gen_groups, shrink=TRUE)
+
+dataset_with_sd_MB_piv %>% 
+  ggplot(aes(SD_value, fill=Object)) + 
+  geom_histogram(alpha = 0.8, position = "identity") + 
+  facet_grid(Scale~LOC_gen_groups, shrink=TRUE)
+
+
+SD_St_cols <- colnames(dataset_with_sd_MB) [colnames(dataset_with_sd_MB) %>% startsWith("SD_St")]
+
+# TODO create empty data frame
+
+for(stcolname in SD_St_cols) {
+
+  st <- (dataset_with_sd_MB_Ex  %>% select(!!as.name(stcolname)))
+  
+  scalename <- strsplit(stcolname, "_")[[1]][3]
+  
+  chcolname <- paste("SD_Ch_", scalename, sep="")
+  ch <- (dataset_with_sd_MB_Ex  %>% select(!!as.name(chcolname)))
+  
+  res <- wilcox.test(st[,1], ch[,1] , mu=0, paired = TRUE, alternative = "two.sided", conf.int=TRUE)
+  
+  # TODO replace `print` with adding a row to the resulting data frame
+  print(paste(scalename, (res)["p.value"], (res)["estimate"]))
+} 
+
+#Internal:
+for(stcolname in SD_St_cols) {
+  
+  st <- (dataset_with_sd_MB_In  %>% select(!!as.name(stcolname)))
+  
+  scalename <- strsplit(stcolname, "_")[[1]][3]
+  
+  chcolname <- paste("SD_Ch_", scalename, sep="")
+  ch <- (dataset_with_sd_MB_In  %>% select(!!as.name(chcolname)))
+  
+  res <- wilcox.test(st[,1], ch[,1] , mu=0, paired = TRUE, alternative = "two.sided", conf.int=TRUE)
+  
+  # TODO replace `print` with adding a row to the resulting data frame
+  print(paste(scalename, (res)["p.value"], (res)["estimate"]))
+}
+
+
+student <- dataset (SD_St_Holodniy, SD_St_Molodoy, )
+?wilcox.test(x, y, paired = TRUE, alternative = "two.sided")
 
