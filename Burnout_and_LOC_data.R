@@ -1,16 +1,16 @@
 rm(list = ls())
 
 # This is code to replicate the analyses and figures from my 2020 Burnout and Locus of Control
-# paper. Code developed by Alena Egorova (@alvegorova)
+# analysis Code developed by Alena Egorova (@alvegorova)
 
 ### DOWNLOAD LIBRARIES
 
-install.packages(c("psych", "ggplot2", "pspearman", "wesanderson"))
+install.packages(c("psych", "ggplot2", "QuantPsyc", "wesanderson"))
 require(ggplot2)
 require(dplyr)
 require(tidyr)
 require(foreign) #to use "read.spss"
-require(pspearman) #for Spearman correlation
+require (QuantPsyc) #for moderation analysis
 require(psych) #for moderation analysis
 require(wesanderson) #to use wesanderson colors
 
@@ -27,11 +27,7 @@ dataset <- dataset[1:93,]
 #make variable names more readable
 dataset$male <- factor(dataset$male, labels = c('Male', 'Female'))
 names(dataset)[names(dataset) == 'male'] <- 'Gender'
-#names(dataset)[names(dataset) == 'Burnout_group'] <- 'Burnout_two_groups'
-#names(dataset)[names(dataset) == 'Burnout_gr2'] <- 'Burnout_group'
-#names(dataset)[names(dataset) == 'LO_gr_1_2'] <- 'LOC_groups'
 names(dataset)[names(dataset) == 'USK_Io'] <- 'LOC'
-#names(dataset)[names(dataset) == 'USK_Ip'] <- 'LOC_prof'
 names(dataset)[names(dataset) == 'age'] <- 'Age'
 names(dataset)[names(dataset) == 'nn'] <- 'Number'
 names(dataset)[names(dataset) == 'stage_com'] <- 'Work_experience'
@@ -41,6 +37,10 @@ names(dataset)[names(dataset) == 'Depersonalization'] <- 'DP'
 names(dataset)[names(dataset) == 'Successfulness'] <- 'PA'
 names(dataset)[names(dataset) == 'stage_sch'] <- 'Last_work_experience'
 
+#names(dataset)[names(dataset) == 'USK_Ip'] <- 'LOC_prof'
+#names(dataset)[names(dataset) == 'Burnout_group'] <- 'Burnout_two_groups'
+#names(dataset)[names(dataset) == 'Burnout_gr2'] <- 'Burnout_group'
+#names(dataset)[names(dataset) == 'LO_gr_1_2'] <- 'LOC_groups'
 #names(dataset)[names(dataset) == 'Eitimia'] <- 'Euthymia'
 #names(dataset)[names(dataset) == 'Distimia'] <- 'Dysthymia'
 
@@ -68,12 +68,8 @@ dataset$PA <- as.integer(dataset$PA)
 #           EE, Depersonalization, PA, 
 #           Burnout)
 
-#keep table with sd
-dataset_with_sd <- dataset
-
 #choose important variables
-dataset <- dataset %>% 
-  select (Number, Age, Gender, Work_experience, Last_work_experience, 
+dataset <- dataset %>% dplyr::select (Number, Age, Gender, Work_experience, Last_work_experience, 
           Subject, LOC, EE, DP, PA)
 
 #to overview the data
@@ -93,19 +89,19 @@ lapply(dataset[, c("Age", "Gender", "Work_experience", "Last_work_experience", "
 #histogram with age and gender
 dataset %>% filter (!is.na(Age)) %>% 
   ggplot(aes(Age, fill=Gender)) + 
-  geom_histogram(alpha = 0.8, position = "stack") + 
+  geom_histogram(alpha = 0.8, position = "stack", binwidth=2) + 
   scale_fill_grey() + theme_classic()
 
 #histogram with Work_experience
 dataset %>%  
   ggplot(aes(Work_experience)) + 
-  geom_histogram(alpha = 0.8, position = "stack") + 
+  geom_histogram(alpha = 0.8, position = "stack", binwidth=2) + 
   scale_fill_grey() + theme_classic()
 
 #histogram with Last_work_experience
 dataset %>%  
   ggplot(aes(Last_work_experience)) + 
-  geom_histogram(alpha = 0.8, position = "stack") + 
+  geom_histogram(alpha = 0.8, position = "stack", binwidth=2) + 
   scale_fill_grey() + theme_classic()
 
 #how many participants have been working at current place less then 10 years
@@ -124,6 +120,12 @@ dataset %>%
 
 ## Burnout data
 
+#reverse Personal Accomplishment scale to Reduced Personal accomplishment scale
+dataset <- dataset %>% mutate (RPA = 48 - PA)
+
+#summary of EE, DP and RPA
+dataset %>% dplyr::select(EE, DP, RPA) %>% summary()
+
 #histogram with emotional exhaustion
 dataset %>%  
   ggplot(aes(EE)) + 
@@ -133,16 +135,13 @@ dataset %>%
 #histogram with depersonalization
 dataset %>%  
   ggplot(aes(DP)) + 
-  geom_histogram(alpha = 0.8, position = "stack") + 
+  geom_histogram(alpha = 0.8, position = "stack", binwidth=1) + 
   scale_fill_grey() + theme_classic()
-
-#reverse Personal Accomplishment scale to Reduced Personal accomplishment scale
-dataset <- dataset %>% mutate (RPA = 48 - PA)
 
 #histogram with RPA
 dataset %>%  
   ggplot(aes(RPA)) + 
-  geom_histogram(alpha = 0.8, position = "stack") + 
+  geom_histogram(alpha = 0.8, position = "stack", binwidth=1) + 
   scale_fill_grey() + theme_classic()
 
 #count scores of emotional exhaustion (EE_score)
@@ -172,27 +171,27 @@ dataset <- dataset %>%
 #count scores of reduction of personal accomplishment (RPA_score)
 dataset <- dataset %>% 
   mutate (RPA_score = ifelse((Gender=="Female" & PA %in% c(36:48)) |
-                              (Gender=="Male" & PA %in% c(35:48)), 1,
-                            ifelse ((Gender=="Female" & PA %in% c(28:35))|
-                                      (Gender=="Male" & PA %in% c(28:34)), 2,
-                                    ifelse ((Gender=="Female" & PA %in% c(22:27))|
-                                              (Gender=="Male" & PA %in% c(23:27)), 3, 5))))
+                               (Gender=="Male" & PA %in% c(35:48)), 1,
+                             ifelse ((Gender=="Female" & PA %in% c(28:35))|
+                                       (Gender=="Male" & PA %in% c(28:34)), 2,
+                                     ifelse ((Gender=="Female" & PA %in% c(22:27))|
+                                               (Gender=="Male" & PA %in% c(23:27)), 3, 5))))
 
 #count integral burnout scores
 dataset <- dataset %>% mutate (Burnout = EE_score+DP_score+RPA_score)
 
 #create factor with burnout groups
 dataset <- dataset %>% mutate (Burnout_group = ifelse(Burnout %in% c(3:4), 1, 
-                                                       ifelse(Burnout %in% c(5:6), 2,
-                                                              ifelse(Burnout %in% c(7:9), 3, 4))))
+                                                      ifelse(Burnout %in% c(5:6), 2,
+                                                             ifelse(Burnout %in% c(7:9), 3, 4))))
 dataset$Burnout_group <- factor(dataset$Burnout_group, 
-                                 levels = c(1,2,3,4),
-                                 labels = c('Low', 'Middle', 'High', 'Very_high'))
+                                levels = c(1,2,3,4),
+                                labels = c('Low', 'Middle', 'High', 'Very_high'))
 
 #histogram with burnout
 dataset %>%  
   ggplot(aes(Burnout, fill=Burnout_group)) + 
-  geom_histogram(alpha = 0.8, position = "stack") + 
+  geom_histogram(alpha = 0.8, position = "stack", binwidth=1) + 
   scale_fill_grey() + theme_classic()
 
 ##LOC data
@@ -200,403 +199,319 @@ dataset %>%
 #histogram with LOC
 dataset %>%  
   ggplot(aes(LOC)) + 
-  geom_histogram(alpha = 0.8, position = "stack") + 
+  geom_histogram(alpha = 0.8, position = "stack", binwidth=1) + 
   scale_fill_grey() + theme_classic()
 
 #view LOC range among participants
 table(dataset$LOC)
 
 #count how many participants are externals in different burnout scores
-xtabs (~ (LOC<22)+ Burnout, data=dataset)
-
-
-### ANALYSIS
-
-## H1
-
-#check normality of EE   -- I should delete ties?
-shapiro.test (dataset$EE)
-ks.test (dataset$EE,pnorm)
-qqnorm(dataset$EE, main="")
-qqline(dataset$EE, col=2)
-
-#check normality of DP
-shapiro.test (dataset$DP)
-ks.test (dataset$DP,pnorm)
-qqnorm(dataset$DP, main="")
-qqline(dataset$DP, col=2)
-
-#check normality of RPA  -- I should delete ties?
-shapiro.test (dataset$RPA)
-ks.test (dataset$RPA,pnorm)
-qqnorm(dataset$RPA, main="")
-qqline(dataset$RPA, col=2)
-
-#check normality of burnout  -- I should delete ties?
-shapiro.test (dataset$Burnout)
-ks.test (dataset$Burnout,pnorm)
-qqnorm(dataset$Burnout, main="")
-qqline(dataset$Burnout, col=2)
-
-#check normality of LOC  -- I should delete ties?
-shapiro.test (dataset$LOC)
-ks.test (dataset$LOC,pnorm)
-qqnorm(dataset$LOC, main="")
-qqline(dataset$LOC, col=2)
-
-#H1a
+xtabs (~ (LOC<22)+ Burnout_group, data=dataset)
 
 #count LOC scores of all participants with high and very high levels of burnout
 high_burnout_dataset <- dataset %>% subset(Burnout_group %in% c("High", "Very_high"))
 table(high_burnout_dataset$LOC)
 
-#H1b
 
-#Spearman correlation for LOC and burnout
+### ANALYSIS
+
+## H1 - general tendencies
+
+#remove outliers
+dataset <- dataset %>% filter (DP %in% c(2:20)) %>% filter (LOC %in% c(13:40))
+
+#check normality of LOC
+shapiro.test (dataset$LOC)
+qqnorm(dataset$LOC, main="")
+qqline(dataset$LOC, col=2)
+
+#check normality of EE
+shapiro.test (dataset$EE)
+qqnorm(dataset$EE, main="")
+qqline(dataset$EE, col=2)
+
+#check normality of DP
+shapiro.test (dataset$DP)
+qqnorm(dataset$DP, main="")
+qqline(dataset$DP, col=2)
+
+#check normality of RPA
+shapiro.test (dataset$RPA)
+qqnorm(dataset$RPA, main="")
+qqline(dataset$RPA, col=2)
+
+#check normality of burnout  
+shapiro.test (dataset$Burnout)
+qqnorm(dataset$Burnout, main="")
+qqline(dataset$Burnout, col=2)
+
+#H1a
+
+#correlation for LOC and burnout
 cor.test(dataset$LOC, dataset$Burnout, method="kendall")
 
-#Plot with relationships between LOC and Burnout
-dataset %>%
-  ggplot(aes(x=LOC, y=Burnout)) + 
-  geom_point() +
-  theme_classic()
+#! VIZUALIZE KENDALL
 
-#Spearman correlation for LOC and EE
-spearman.test(dataset$LOC, dataset$EE)
+#correlation for LOC and EE
+cor.test(dataset$LOC, dataset$EE, method="pearson")
+cor.test(dataset$LOC, dataset$EE, method="kendall")
 
-#Plot with relationships between LOC and EE
+#plot with relationships between LOC and EE
 dataset %>%
   ggplot(aes(x=LOC, y=EE)) + 
   geom_point() +
   theme_classic()
 
-#Spearman correlation for LOC and DP
-spearman.test(dataset$LOC, dataset$DP)
+#correlation for LOC and DP
+cor.test(dataset$LOC, dataset$DP, method="pearson")
+cor.test(dataset$LOC, dataset$DP, method="kendall")
 
-#Plot with relationships between LOC and DP
+#plot with relationships between LOC and DP
 dataset %>%
   ggplot(aes(x=LOC, y=DP)) + 
   geom_point() +
   theme_classic()
 
-#Spearman correlation for LOC and RPA
-spearman.test(dataset$LOC, dataset$RPA)
+#correlation for LOC and RPA
+cor.test(dataset$LOC, dataset$RPA, method="pearson")
+cor.test(dataset$LOC, dataset$RPA, method="kendall")
 
-#Plot with relationships between LOC and RPA
+#plot with relationships between LOC and RPA
 dataset %>%
   ggplot(aes(x=LOC, y=RPA)) + 
   geom_point() +
   theme_classic()
 
-#Scatterplots with relationships between DP+LOC+RPA
+#plot relationships between DP+LOC+RPA
 DP_LOC_RP <- data.frame (
   DP=dataset$DP, 
   LOC=dataset$LOC, 
   RPA=dataset$RPA)
 plot(DP_LOC_RP)
 
-#Spearman correlation for EE and RPA
-spearman.test(dataset$EE, dataset$RPA)
+#H1c
 
-#Spearman correlation for EE and DP
-spearman.test(dataset$EE, dataset$DP)
+#correlation for DP and RPA
+cor.test(dataset$DP, dataset$RPA, method="pearson")
+cor.test(dataset$DP, dataset$RPA, method="kendall")
 
-#Spearman correlation for DP and RPA
-spearman.test(dataset$DP, dataset$RPA)
+#H1d
 
+#correlation for EE and RPA
+cor.test(dataset$EE, dataset$RPA, method="pearson")
+cor.test(dataset$EE, dataset$RPA, method="kendall")
+
+#correlation for EE and DP
+cor.test(dataset$EE, dataset$DP, method="pearson")
+cor.test(dataset$EE, dataset$DP, method="kendall")
+
+#plot relationships between DP, EE and RPA
 DP_EE_RP <- data.frame (
   DP=dataset$DP, 
   EE=dataset$EE, 
   RPA=dataset$RPA)
 plot(DP_EE_RP)
 
-##H2
+##H2 - low level of DP+RPA
+#create variable with different DP+RPA scores
+dataset <- dataset %>% 
+  mutate (groups_DPRPA = ifelse((RPA_score+DP_score)<3, 1, 
+                                ifelse((RPA_score+DP_score)==3, 2, 
+                                       ifelse((RPA_score+DP_score)==4,3,4))))
+#check how many observations in the low level of DP+RPA
+dataset %>% filter (groups_DPRPA==1) %>% nrow()
 
-## FOR 3:4 level
-#creating subset with the participants in 3:4 level of DP and RP development
-dataset_middle_high_DP_RP_2 <- dataset %>% filter ((DP_score+RPA_score) %in% c(3:4))
+##H3 - middle level of DP+RPA and low lever of EE
 
-#Spearman correlation for LOC and DP in the middle level of DP and RP development
-spearman.test(dataset_middle_high_DP_RP_2$LOC, dataset_middle_high_DP_RP_2$DP)
+#overview range of EE scores on different levels of DP+RPA
+table(dataset$groups_DPRPA, dataset$EE_score)
 
-#Creating ggplot with LOC and DP in the teachers with middle level of DP and RP
-dataset_middle_high_DP_RP_2 %>%
+#creating subset with the participants in 3:4 level of DP and RPA development
+dataset_mid_DP_RPA <- dataset %>% filter ((DP_score+RPA_score) %in% c(3:4))
+
+#counting number of participants in 3:4 levels of DP+RPA development
+nrow(dataset_mid_DP_RPA)
+
+#summary of EE, DP and RPA in 3:4 levels of DP+RPA
+dataset_mid_DP_RPA %>% dplyr::select(EE, DP, RPA) %>% summary()
+
+#H3a
+
+#check new subset for normality of EE, DP, RPA and LOC
+
+#check normality of EE
+shapiro.test (dataset_mid_DP_RPA$EE)
+qqnorm(dataset_mid_DP_RPA$EE, main="")
+qqline(dataset_mid_DP_RPA$EE, col=2)
+
+#check normality of DP
+shapiro.test (dataset_mid_DP_RPA$DP)
+qqnorm(dataset_mid_DP_RPA$DP, main="")
+qqline(dataset_mid_DP_RPA$DP, col=2)
+
+#check normality of RPA
+shapiro.test (dataset_mid_DP_RPA$RPA)
+qqnorm(dataset_mid_DP_RPA$RPA, main="")
+qqline(dataset_mid_DP_RPA$RPA, col=2)
+
+#check normality of LOC
+shapiro.test (dataset_mid_DP_RPA$LOC)
+qqnorm(dataset_mid_DP_RPA$LOC, main="")
+qqline(dataset_mid_DP_RPA$LOC, col=2)
+
+#correlation for LOC and DP in the middle level of DP and RPA development
+cor.test(dataset_mid_DP_RPA$LOC, dataset_mid_DP_RPA$DP, method="pearson")
+cor.test(dataset_mid_DP_RPA$LOC, dataset_mid_DP_RPA$DP, method="kendall")
+
+#plot with LOC and DP in the teachers with middle level of DP and RPA
+dataset_mid_DP_RPA %>%
   ggplot(aes(x=LOC, y=DP)) + 
   geom_point() +
-  geom_line() + theme_classic()
+  theme_classic()
 
-#Spearman correlation for LOC and RP in the middle level of DP and RP development
-spearman.test(dataset_middle_high_DP_RP_2$LOC, dataset_middle_high_DP_RP_2$RPA)
+#H3b
 
-#Creating ggplot with LOC and RP in the teachers with middle level of DP and RP
-dataset_middle_high_DP_RP_2 %>%
+#correlation for LOC and RPA in the middle level of DP and RPA development
+cor.test(dataset_mid_DP_RPA$LOC, dataset_mid_DP_RPA$RPA, method="pearson")
+cor.test(dataset_mid_DP_RPA$LOC, dataset_mid_DP_RPA$RPA, method="kendall")
+
+#Creating ggplot with LOC and RPA in the teachers with middle level of DP and RP
+dataset_mid_DP_RPA %>%
   ggplot(aes(x=LOC, y=RPA)) + 
   geom_point() +
-  geom_line() + theme_classic()
+  theme_classic()
 
-#FOR 3 level
-#creating subset with the participants in 3 level of DP and RP development
-dataset_middle_DP_RP_2 <- dataset %>% filter ((DP_score+RPA_score) %in% c(3))
+#H3c
 
-#Spearman correlation for LOC and DP in the middle level of DP and RP development
-spearman.test(dataset_middle_DP_RP_2$LOC, dataset_middle_DP_RP_2$DP)
+#creating subset with the participants in 3:4 level of DP and RPA development
+dataset_high_DP_RPA <- dataset %>% filter (groups_DPRPA==4)
 
-#Creating ggplot with LOC and DP in the teachers with middle level of DP and RP
-dataset_middle_DP_RP_2 %>%
+#counting number of participants in 3:4 levels of DP+RPA development
+nrow(dataset_high_DP_RPA)
+
+#summary of EE, DP and RPA in 3:4 levels of DP+RPA
+dataset_high_DP_RPA %>% dplyr::select(EE, DP, RPA) %>% summary()
+
+#check new subset for normality of EE, DP, RPA and LOC
+
+#check normality of EE
+shapiro.test (dataset_high_DP_RPA$EE)
+qqnorm(dataset_high_DP_RPA$EE, main="")
+qqline(dataset_high_DP_RPA$EE, col=2)
+
+#check normality of DP
+shapiro.test (dataset_high_DP_RPA$DP)
+qqnorm(dataset_high_DP_RPA$DP, main="")
+qqline(dataset_high_DP_RPA$DP, col=2)
+
+#check normality of RPA
+shapiro.test (dataset_high_DP_RPA$RPA)
+qqnorm(dataset_high_DP_RPA$RPA, main="")
+qqline(dataset_high_DP_RPA$RPA, col=2)
+
+#check normality of LOC
+shapiro.test (dataset_high_DP_RPA$LOC)
+qqnorm(dataset_high_DP_RPA$LOC, main="")
+qqline(dataset_high_DP_RPA$LOC, col=2)
+
+#correlation for LOC and DP in the middle level of DP and RPA development
+cor.test(dataset_high_DP_RPA$LOC, dataset_high_DP_RPA$DP, method="pearson")
+cor.test(dataset_high_DP_RPA$LOC, dataset_high_DP_RPA$DP, method="kendall")
+
+#plot with LOC and DP in the teachers with middle level of DP and RPA
+dataset_high_DP_RPA %>%
   ggplot(aes(x=LOC, y=DP)) + 
   geom_point() +
-  geom_line() + theme_classic()
+  theme_classic()
 
-#Spearman correlation for LOC and RP in the middle level of DP and RP development
-spearman.test(dataset_middle_DP_RP_2$LOC, dataset_middle_DP_RP_2$RPA)
+#H3b
 
-#Creating ggplot with LOC and RP in the teachers with middle level of DP and RP
-dataset_middle_DP_RP_2 %>%
+#correlation for LOC and RPA in the middle level of DP and RPA development
+cor.test(dataset_high_DP_RPA$LOC, dataset_high_DP_RPA$RPA, method="pearson")
+cor.test(dataset_high_DP_RPA$LOC, dataset_high_DP_RPA$RPA, method="kendall")
+
+#Creating ggplot with LOC and RPA in the teachers with middle level of DP and RP
+dataset_high_DP_RPA %>%
   ggplot(aes(x=LOC, y=RPA)) + 
   geom_point() +
-  geom_line() + theme_classic()
+  theme_classic()
 
 
-### MODERATION  
+#H4a 
 
-##WITH DUMMY
+#LM DP~EE 
+summary(lm (scale(dataset_mid_DP_RPA$DP, scale=F) ~ scale(dataset_mid_DP_RPA$EE, scale=F)))
 
-
-?lm()
-
-#_____
-
-
-install.packages("rockchalk")
-library(rockchalk)
-plotSlopes((lm(DP ~ EE*LOC, data=dataset_middle_DP_RP_2)), 
-           plotx="EE",
-           modx="LOC", modxVals="std.dev.")
-
-
-install.packages("mediation")
-require (mediation)
-
-##BY HAND (error when try to use ordered variables)
-
-##IN DATASET (where variables perceived as numeric)
-#check regression DP~EE
-summary(lm(DP ~ EE, data=dataset))
-#check moderation of DP~EE+LOC (where variables perceived as numeric)
-summary(lm(DP ~ EE*LOC, data=dataset))
-
-##IN LEVEL 2 
-#check regression DP~EE (where variables perceived as numeric)
-summary(lm(DP ~ EE, data=dataset_middle_DP_RP_2))
-#check moderation of DP~EE+LOC 
-summary(lm(DP ~ EE*LOC, data=dataset_middle_DP_RP_2))
-
-#in order to make EE estimation interpretable, here we centering LOC
-dataset_middle_DP_RP_2 <- dataset_middle_DP_RP_2 %>% mutate(LOC_centered=LOC-mean(LOC))
-#and calculate lm() with LOC centered
-summary(lm(DP ~ EE*LOC_centered, data=dataset_middle_DP_RP_2))
-
-#check moderation of RP~EE+LOC (where variables perceived as numeric)
-summary(lm(RPA ~ EE*LOC, data=dataset_middle_DP_RP_2))
-
-#why impact from EE on DP here non-significant?
-summary(lm(DP ~ EE, data=dataset_middle_DP_RP_2))
-
-
-##WITH LAVAAN (error when try to use ordered variables)
-
-install.packages("lavaan")
-require (lavaan)
-lm_D_E_L <- lm(DP ~ EE*LOC_centered, data=dataset_middle_DP_RP_2)
-lavaan(model = DP ~ EE + LOC + EE:LOC, data=dataset_middle_DP_RP_2, ordered = TRUE)
-
-summary(lavaan(model=(DP_ordered~EE_ordered+LOC_ordered+EE_ordered:LOC_ordered), data=dataset))
-summary(lavaan(model=DP~EE+LOC+EE:LOC, data=dataset))
-
-#check moderation of DP~EE+LOC and RP~EE+LOC, where variables perceived as factors
-is.factor(dataset$DP_ordered2)
-dataset$EE_ordered <- factor(dataset$EE, ordered=TRUE)
-dataset$DP_ordered <- factor(dataset$DP, ordered=TRUE)
-dataset$RP_ordered <- factor(dataset$RPA, ordered=TRUE)
-dataset$LOC_ordered <- factor(dataset$LOC, ordered=TRUE)
-
-install.packages("MeMoBootR")
-
-##WITH QuantPsyc (CAN MAKE CENTERED, BUT ERRORS WHEN USE ORDERED)
-
-install.packages("QuantPsyc")
-require (QuantPsyc)
-
-lm.mod1 <- moderate.lm(EE, LOC, DP, dataset, mc=FALSE)
-ss.mod1 <- sim.slopes(lm.mod1,meanCenter(dataset$LOC))
-summary(lm.mod1)
-ss.mod1
-# use mouse click to place legend in graph.mod
-graph.mod(ss.mod1,EE,DP,dataset,"Interaction Example")
-
-#the same with ordered
-lm.mod2 <- moderate.lm(EE_ordered, LOC_ordered, DP_ordered, dataset, mc=FALSE)
-ss.mod1 <- sim.slopes(lm.mod1,meanCenter(dataset$LOC_ordered))
-summary(lm.mod1)
-ss.mod1
-# use mouse click to place legend in graph.mod
-graph.mod(ss.mod1,EE_ordered,DP_ordered,dataset,"Interaction Example")
-
-
-##WITH INTERACTIONS (ERROR)
-install.packages("interactions")
-require (interactions)
-
-cat_plot(model=lm(DP_ordered ~ EE_ordered*LOC_ordered, data=dataset), pred=EE_ordered, modx=LOC_ordered, data=dataset)
-
-##BY HAND
-summary(lm(DP ~ EE*LOC, data=dataset))
-#Ordered do not work BY HAND (error)
-summary(lm(DP_ordered ~ EE_ordered*LOC_ordered, data=dataset))
-
-##WITH MeMoBootR
-
-install.packages("devtools")
-devtools::install_github("doomlab/MeMoBootR")
-library(MeMoBootR)
-
-library(diagram)
-library(shape)
-??MeMoBootR
-
-
-
-#multiple regression: Depersonalization ~ Burnout + LOC
-
-dep.mult.reg <- data.frame (
-  Depersonalization=dataset$DP, 
-  LOC_prof=dataset$LOC_prof, 
-  Burnout=dataset$Burnout)
-plot(dep.mult.reg)
-
-summary(lm(DP ~ Burnout+LOC_prof, data=dataset))
-summary(lm(DP ~ Burnout, data=dataset))
-summary(lm(DP ~ LOC_prof, data=dataset))
-new_plot <- lm(DP ~ Burnout, data=dataset)
-plot(lm(DP ~ Burnout, data=dataset))
-
-dataset %>% 
-  ggplot(aes(Burnout,DP, col=LOC_prof_groups)) +
+#plot
+dataset_mid_DP_RPA %>%
+  ggplot(aes(x=EE, y=DP)) + 
   geom_point() +
-  geom_smooth(method = "lm")
+  theme_classic()
 
-#Without middle LOC_prof (taking just ends to detect the difference)
-hist(dataset$LOC_prof) #7 is the middle
-dataset_2 <- dataset %>% filter (LOC_prof<7 | LOC_prof>7)
-xtabs (~ LOC_prof_groups + Burnout_group, data=dataset) #how much we had
-xtabs (~ LOC_prof_groups + Burnout_group, data=dataset_2) #how much we have without 7 in LOC_prof
+#moderation analysis DP~EE*LOC with QuantPsyc
+lm.mod.DP <- moderate.lm(EE, LOC, DP, dataset_mid_DP_RPA, mc=FALSE)
+slopes.mod.DP <- sim.slopes(lm.mod.DP,meanCenter(dataset_mid_DP_RPA$LOC))
+summary(lm.mod.DP)
+slopes.mod.DP
+# when executing hraph.mod use mouse click to place legend
+graph.mod(slopes.mod.DP,EE,DP,dataset_mid_DP_RPA,
+          title="Interaction in different LOC", xlab="Emotional exhaustion", ylab="Depersonalization")
 
-#USING LM compare what has more influence burnout or LOC (when burnout medium)
-dataset_3 <- dataset_2 %>% filter (Burnout_group=="Burnout_medium") 
-xtabs (~LOC_prof_groups + DP, data=dataset_3)
-xtabs (~LOC_prof_groups + RPA, data=dataset_3)
-summary(lm(DP ~ EE+LOC_prof, data=dataset_3))  
-summary(lm(RPA ~ EE+LOC_prof, data=dataset_3)) 
+#H4b
+#LM RPA~EE 
+summary(lm (scale(dataset_mid_DP_RPA$RPA, scale=F) ~ scale(dataset_mid_DP_RPA$EE, scale=F)))
 
-#regression between RPA and Depersonalization (in all data_)
-#when Burnout_medium
-dataset_4 <- dataset %>% filter (Burnout_group=="Burnout_medium") 
-summary(lm(RPA ~ DP, data=dataset_4)) 
-#when Burnout_high
-dataset_Burn_high <- dataset %>% filter (Burnout_group=="Burnout_high") 
-summary(lm(RPA ~ DP, data=dataset_Burn_high)) 
-#when Burnout_low
-dataset_Burn_low <- dataset %>% filter (Burnout_group=="Burnout_low") 
-summary(lm(RPA ~ DP, data=dataset_Burn_low)) 
+#plot
+dataset_mid_DP_RPA %>%
+  ggplot(aes(x=EE, y=RPA)) + 
+  geom_point() +
+  theme_classic()
 
-### GROUPS OF BURNOUT AND LOC
+#moderation analysis DP~EE*LOC with QuantPsyc
+lm.mod.RPA <- moderate.lm(EE, LOC, RPA, dataset_mid_DP_RPA, mc=FALSE)
+slopes.mod.RPA <- sim.slopes(lm.mod.RPA,meanCenter(dataset_mid_DP_RPA$LOC))
+summary(lm.mod.RPA)
+slopes.mod.RPA
+# when executing hraph.mod use mouse click to place legend
+graph.mod(slopes.mod.RPA,EE,RPA,dataset_mid_DP_RPA,
+          title="Interaction in different LOC", xlab="Emotional exhaustion", ylab="Reduction of PA")
 
-#creating variable with three levels of Burnout
-dataset$Burnout_group <- factor (dataset$Burnout_group,
-                                        levels=c(1,2,3),
-                                        labels=c("Burnout_low", "Burnout_medium", "Burnout_high"))
+#H4c - in high level DP+RPA 
 
-#creating variable with External and Internal general LOC
-dataset$LOC_groups <- factor (dataset$LOC_groups,
-                                  levels=c(1,2),
-                                  labels=c("External", "Internal"))
+#LM DP~EE 
+summary(lm (scale(dataset_high_DP_RPA$DP, scale=F) ~ scale(dataset_high_DP_RPA$EE, scale=F)))
 
-#creating variable with External and Internal LOC in professional domain
-dataset <- mutate (dataset, LOC_prof_groups = ifelse(dataset$LOC_prof<7, 1, 2))
-dataset$LOC_prof_groups <- factor (dataset$LOC_prof_groups,
-                                   levels=c(1,2),
-                                   labels=c("External", "Internal"))
+#plot
+dataset_high_DP_RPA %>%
+  ggplot(aes(x=EE, y=DP)) + 
+  geom_point() +
+  theme_classic()
 
-#calculate the number of participans in each LOC_prof/Burnout group
-#xtabs (~ LOC_prof_groups + Burnout_group, data=dataset)
-xtabs (~ LOC_groups + Burnout_group, data=dataset)
+#moderation analysis DP~EE*LOC with QuantPsyc
+lm.mod.high.DP <- moderate.lm(EE, LOC, DP, dataset_high_DP_RPA, mc=FALSE)
+slopes.mod.high.DP <- sim.slopes(lm.mod.high.DP,meanCenter(dataset_high_DP_RPA$LOC))
+summary(lm.mod.high.DP)
+slopes.mod.high.DP
+# when executing hraph.mod use mouse click to place legend
+graph.mod(slopes.mod.high.DP,EE,DP,dataset_high_DP_RPA,
+          title="Interaction in different LOC", xlab="Emotional exhaustion", ylab="Depersonalization")
 
+#H4b
+#LM RPA~EE 
+summary(lm (scale(dataset_high_DP_RPA$RPA, scale=F) ~ scale(dataset_high_DP_RPA$EE, scale=F)))
 
-### SEMANTIC DIFFERENTIAL
+#plot
+dataset_high_DP_RPA %>%
+  ggplot(aes(x=EE, y=RPA)) + 
+  geom_point() +
+  theme_classic()
 
-#making SD varidables more readable
-names(dataset)[names(dataset) == 'SD_St_Tyajeliy'] <- 'Student_Heavy'
-#ADD_THE_REST!
+#moderation analysis DP~EE*LOC with QuantPsyc
+lm.mod.high.RPA <- moderate.lm(EE, LOC, RPA, dataset_high_DP_RPA, mc=FALSE)
+slopes.mod.high.RPA <- sim.slopes(lm.mod.high.RPA,meanCenter(dataset_high_DP_RPA$LOC))
+summary(lm.mod.high.RPA)
+slopes.mod.high.RPA
+# when executing hraph.mod use mouse click to place legend
+graph.mod(slopes.mod.high.RPA,EE,RPA,dataset_high_DP_RPA,
+          title="Interaction in different LOC", xlab="Emotional exhaustion", ylab="Reduction of PA")
 
-dataset_with_sd_MB <- dataset_with_sd %>% 
-  filter (Burnout_group=='Burnout_medium')
-
-dataset_with_sd_MB_Ex <- dataset_with_sd_MB %>% 
-  filter (LOC_groups=="External")
-
-dataset_with_sd_MB_In <- dataset_with_sd_MB %>% 
-  filter (LOC_groups=="Internal")
-
-SD_col <- colnames(dataset_with_sd_MB) [colnames(dataset_with_sd_MB) %>% startsWith("SD_")]
-dataset_with_sd_MB_piv <- pivot_longer(dataset_with_sd_MB, SD_col, names_to = c("Object","Scale"), 
-                                       names_prefix = "SD_", names_sep = "_", values_to = "SD_value", values_drop_na =TRUE)
-
-dataset_with_sd_MB_piv %>% 
-  ggplot(aes(SD_value, fill=Object)) + 
-  geom_density(alpha = 0.8, position = "identity") + 
-  facet_grid(Scale~LOC_groups, shrink=TRUE)
-
-dataset_with_sd_MB_piv %>% 
-  ggplot(aes(SD_value, fill=Object)) + 
-  geom_histogram(alpha = 0.8, position = "identity") + 
-  facet_grid(Scale~LOC_groups, shrink=TRUE)
-
-
-SD_St_cols <- colnames(dataset_with_sd_MB) [colnames(dataset_with_sd_MB) %>% startsWith("SD_St")]
-
-# TODO create empty data frame
-
-for(stcolname in SD_St_cols) {
-  
-  st <- (dataset_with_sd_MB_Ex  %>% select(!!as.name(stcolname)))
-  
-  scalename <- strsplit(stcolname, "_")[[1]][3]
-  
-  chcolname <- paste("SD_Ch_", scalename, sep="")
-  ch <- (dataset_with_sd_MB_Ex  %>% select(!!as.name(chcolname)))
-  
-  res <- wilcox.test(st[,1], ch[,1] , mu=0, paired = TRUE, alternative = "two.sided", conf.int=TRUE)
-  
-  # TODO replace `print` with adding a row to the resulting data frame
-  print(paste(scalename, (res)["p.value"], (res)["estimate"]))
-} 
-
-#Internal:
-for(stcolname in SD_St_cols) {
-  
-  st <- (dataset_with_sd_MB_In  %>% select(!!as.name(stcolname)))
-  
-  scalename <- strsplit(stcolname, "_")[[1]][3]
-  
-  chcolname <- paste("SD_Ch_", scalename, sep="")
-  ch <- (dataset_with_sd_MB_In  %>% select(!!as.name(chcolname)))
-  
-  res <- wilcox.test(st[,1], ch[,1] , mu=0, paired = TRUE, alternative = "two.sided", conf.int=TRUE)
-  
-  # TODO replace `print` with adding a row to the resulting data frame
-  print(paste(scalename, (res)["p.value"], (res)["estimate"]))
-}
-
-
-student <- dataset (SD_St_Holodniy, SD_St_Molodoy, )
-?wilcox.test(x, y, paired = TRUE, alternative = "two.sided")
