@@ -251,7 +251,6 @@ cor.test(dataset$LOC, dataset$Burnout, method="kendall")
 
 #correlation for LOC and EE
 cor.test(dataset$LOC, dataset$EE, method="pearson")
-cor.test(dataset$LOC, dataset$EE, method="kendall")
 
 #plot with relationships between LOC and EE
 dataset %>%
@@ -261,7 +260,6 @@ dataset %>%
 
 #correlation for LOC and DP
 cor.test(dataset$LOC, dataset$DP, method="pearson")
-cor.test(dataset$LOC, dataset$DP, method="kendall")
 
 #plot with relationships between LOC and DP
 dataset %>%
@@ -271,7 +269,6 @@ dataset %>%
 
 #correlation for LOC and RPA
 cor.test(dataset$LOC, dataset$RPA, method="pearson")
-cor.test(dataset$LOC, dataset$RPA, method="kendall")
 
 #plot with relationships between LOC and RPA
 dataset %>%
@@ -286,18 +283,14 @@ DP_LOC_RP <- data.frame (
   RPA=dataset$RPA)
 plot(DP_LOC_RP)
 
-
 #correlation for DP and RPA
 cor.test(dataset$DP, dataset$RPA, method="pearson")
-cor.test(dataset$DP, dataset$RPA, method="kendall")
 
 #correlation for EE and RPA
 cor.test(dataset$EE, dataset$RPA, method="pearson")
-cor.test(dataset$EE, dataset$RPA, method="kendall")
 
 #correlation for EE and DP
 cor.test(dataset$EE, dataset$DP, method="pearson")
-cor.test(dataset$EE, dataset$DP, method="kendall")
 
 #plot relationships between DP, EE and RPA
 DP_EE_RP <- data.frame (
@@ -306,16 +299,18 @@ DP_EE_RP <- data.frame (
   RPA=dataset$RPA)
 plot(DP_EE_RP)
 
-## Prepare middle level of DP+RPA
+## Prepare second stage group (middle level of DP+RPA)
 
-#creating subset with the participants in 3:4 level of DP+RPA 
+#creating subset with the participants on second stage (3:4 level of DP+RPA) 
 dataset_mid_DP_RPA <- dataset %>% filter ((DP_score+RPA_score) %in% c(3:4))
 
 #counting number of participants in 3:4 levels of DP+RPA
 nrow(dataset_mid_DP_RPA)
 
-#summary of EE, DP and RPA in 3:4 levels of DP+RPA
+#summary of EE, DP and RPA on second stage
 dataset_mid_DP_RPA %>% dplyr::select(EE, DP, RPA) %>% summary()
+
+dataset_mid_DP_RPA %>% dplyr::select(EE_score, DP_score, RPA_score) %>% summary()
 
 #check new subset for normality of EE, DP, RPA and LOC
 
@@ -339,33 +334,7 @@ shapiro.test (dataset_mid_DP_RPA$LOC)
 qqnorm(dataset_mid_DP_RPA$LOC, main="")
 qqline(dataset_mid_DP_RPA$LOC, col=2)
 
-## H1a: LOC and DP (mid)
-
-#correlation for LOC and DP in the middle level of DP+RPA
-cor.test(dataset_mid_DP_RPA$LOC, dataset_mid_DP_RPA$DP, method="pearson")
-cor.test(dataset_mid_DP_RPA$LOC, dataset_mid_DP_RPA$DP, method="kendall")
-
-#plot with LOC and DP in the teachers with middle level of DP and RPA
-dataset_mid_DP_RPA %>%
-  ggplot(aes(x=LOC, y=DP)) + 
-  geom_point(color=wes_palette(n=1, name="Royal1")) +
-  geom_smooth(method="lm", color=wes_palette(n=1, name="Royal1")) +
-  theme_classic() 
-  
-## H2a: LOC and RPA (mid)
-
-#correlation for LOC and RPA in the middle level of DP and RPA development
-cor.test(dataset_mid_DP_RPA$LOC, dataset_mid_DP_RPA$RPA, method="pearson")
-cor.test(dataset_mid_DP_RPA$LOC, dataset_mid_DP_RPA$RPA, method="kendall")
-
-#Creating ggplot with LOC and RPA in the teachers with middle level of DP and RP
-dataset_mid_DP_RPA %>%
-  ggplot(aes(x=LOC, y=RPA)) + 
-  geom_point(color=wes_palette(n=1, name="Royal1")) +
-  geom_smooth(method="lm", color=wes_palette(n=1, name="Royal1")) +
-  theme_classic()
-
-## Prepare high level of DP+RPA
+## Prepare third stage group (high level of DP+RPA)
 
 #creating subset with the participants in 5 and higher levels of DP and RPA development
 dataset_high_DP_RPA <- dataset %>% filter ((DP_score+RPA_score)>4)
@@ -399,35 +368,18 @@ shapiro.test (dataset_high_DP_RPA$LOC)
 qqnorm(dataset_high_DP_RPA$LOC, main="")
 qqline(dataset_high_DP_RPA$LOC, col=2)
 
-## H1b: LOC and DP (high)
+## Moderation analysis 
 
-#correlation for LOC and DP in the high level of DP and RPA development
-cor.test(dataset_high_DP_RPA$LOC, dataset_high_DP_RPA$DP, method="pearson")
-cor.test(dataset_high_DP_RPA$LOC, dataset_high_DP_RPA$DP, method="kendall")
+## H1a. DP~EE*LOC (second stage)
 
-#plot with LOC and DP in the teachers with high level of DP and RPA
-dataset_high_DP_RPA %>%
+#LM DP~LOC 
+summary(lm (scale(dataset_mid_DP_RPA$DP, scale=F) ~ scale(dataset_mid_DP_RPA$LOC, scale=F)))
+#plot
+dataset_mid_DP_RPA %>%
   ggplot(aes(x=LOC, y=DP)) + 
   geom_point(color=wes_palette(n=1, name="Royal1")) +
   geom_smooth(method="lm", color=wes_palette(n=1, name="Royal1")) +
   theme_classic()
-
-## H2b: LOC and RPA (high)
-
-#correlation for LOC and RPA in the high level of DP and RPA development
-cor.test(dataset_high_DP_RPA$LOC, dataset_high_DP_RPA$RPA, method="pearson")
-cor.test(dataset_high_DP_RPA$LOC, dataset_high_DP_RPA$RPA, method="kendall")
-
-#Creating ggplot with LOC and RPA in the teachers with high level of DP and RP
-dataset_high_DP_RPA %>%
-  ggplot(aes(x=LOC, y=RPA)) + 
-  geom_point(color=wes_palette(n=1, name="Royal1")) +
-  geom_smooth(method="lm", color=wes_palette(n=1, name="Royal1")) +
-  theme_classic()
-
-## Moderation analysis 
-
-## H3a: DP~EE*LOC (mid)
 
 #LM DP~EE 
 summary(lm (scale(dataset_mid_DP_RPA$DP, scale=F) ~ scale(dataset_mid_DP_RPA$EE, scale=F)))
@@ -448,14 +400,14 @@ slopes.mod.DP
 graph.mod(slopes.mod.DP,EE,DP,dataset_mid_DP_RPA,
           title="Interaction in different LOC", xlab="Emotional exhaustion", ylab="Depersonalization")
 
-#plot DP, LOC and EE
+##plot DP, LOC and EE
 #DP_LOC_EE <- data.frame (
 #  DP=dataset_mid_DP_RPA$DP, 
 #  LOC=dataset_mid_DP_RPA$LOC, 
 #  EE=dataset_mid_DP_RPA$EE)
 #plot(DP_LOC_EE)
 
-## H4a: RPA~EE*LOC (mid)
+## H2a. RPA~EE*LOC (second stage)
 
 #LM RPA~EE 
 summary(lm (scale(dataset_mid_DP_RPA$RPA, scale=F) ~ scale(dataset_mid_DP_RPA$EE, scale=F)))
@@ -476,15 +428,19 @@ slopes.mod.RPA
 graph.mod(slopes.mod.RPA,EE,RPA,dataset_mid_DP_RPA,
           title="Interaction in different LOC", xlab="Emotional exhaustion", ylab="Reduction of PA")
 
-## H3b: DP~EE*LOC (high) 
+## H1b. DP~EE*LOC (third stage) 
 
 #LM DP~EE 
 summary(lm (scale(dataset_high_DP_RPA$DP, scale=F) ~ scale(dataset_high_DP_RPA$EE, scale=F)))
 
+#cor DP~EE
+cor.test(dataset_high_DP_RPA$DP, dataset_high_DP_RPA$EE, method="pearson")
+
 #plot
 dataset_high_DP_RPA %>%
   ggplot(aes(x=EE, y=DP)) + 
-  geom_point() +
+  geom_point(color=wes_palette(n=1, name="Royal1")) +
+  geom_smooth(method="lm", color=wes_palette(n=1, name="Royal1")) +
   theme_classic()
 
 #moderation analysis DP~EE*LOC with QuantPsyc
@@ -496,15 +452,19 @@ slopes.mod.high.DP
 graph.mod(slopes.mod.high.DP,EE,DP,dataset_high_DP_RPA,
           title="Interaction in different LOC", xlab="Emotional exhaustion", ylab="Depersonalization")
 
-## H4b: RPA~EE*LOC (high)
+## H2b. RPA~EE*LOC (third stage)
 
 #LM RPA~EE 
 summary(lm (scale(dataset_high_DP_RPA$RPA, scale=F) ~ scale(dataset_high_DP_RPA$EE, scale=F)))
 
+#cor DP~EE
+cor.test(dataset_high_DP_RPA$RPA, dataset_high_DP_RPA$EE, method="pearson")
+
 #plot
 dataset_high_DP_RPA %>%
   ggplot(aes(x=EE, y=RPA)) + 
-  geom_point() +
+  geom_point(color=wes_palette(n=1, name="Royal1")) +
+  geom_smooth(method="lm", color=wes_palette(n=1, name="Royal1")) +
   theme_classic()
 
 #moderation analysis DP~EE*LOC with QuantPsyc
