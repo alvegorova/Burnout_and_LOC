@@ -74,12 +74,6 @@ colSums(is.na(dataset))
 lapply(dataset[, c("Age", "Gender", "Work_experience", "Last_work_experience", "Subject")], table)
 mean(dataset$Age, na.rm = TRUE)
 sd(dataset$Age, na.rm = TRUE)
-mean(dataset$Work_experience)
-sd(dataset$Work_experience)
-mean(dataset$Last_work_experience, na.rm = TRUE)
-sd(dataset$Last_work_experience, na.rm = TRUE)
-mean(dataset$Work_experience)
-sd(dataset$Work_experience)
 
 #histogram with age and gender
 dataset %>% filter (!is.na(Age)) %>% 
