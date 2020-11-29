@@ -1,7 +1,8 @@
 rm(list = ls())
 
-# This is code to replicate the analyses and figures from my 2020 Burnout and Locus of Control
-# analysis Code developed by Alena Egorova (@alvegorova)
+# This is code to replicate the analyses and figures 
+# from my 2020 Burnout and Locus of Control research analysis.
+# Code developed by Alena Egorova (@alvegorova)
 
 ### DOWNLOAD LIBRARIES
 
@@ -36,13 +37,6 @@ names(dataset)[names(dataset) == 'Depersonalization'] <- 'DP'
 names(dataset)[names(dataset) == 'Successfulness'] <- 'PA'
 names(dataset)[names(dataset) == 'stage_sch'] <- 'Last_work_experience'
 
-#names(dataset)[names(dataset) == 'USK_Ip'] <- 'LOC_prof'
-#names(dataset)[names(dataset) == 'Burnout_group'] <- 'Burnout_two_groups'
-#names(dataset)[names(dataset) == 'Burnout_gr2'] <- 'Burnout_group'
-#names(dataset)[names(dataset) == 'LO_gr_1_2'] <- 'LOC_groups'
-#names(dataset)[names(dataset) == 'Eitimia'] <- 'Euthymia'
-#names(dataset)[names(dataset) == 'Distimia'] <- 'Dysthymia'
-
 #edit subject info
 names(dataset)[names(dataset) == 'speciality1'] <- 'Subject'
 dataset$Subject <- factor(dataset$Subject, labels = c('Math and engineering', 'Natural sciences', 'Humanities', 'Physical'))
@@ -61,12 +55,6 @@ dataset$EE <- as.integer(dataset$EE)
 dataset$DP <- as.integer(dataset$DP)
 dataset$PA <- as.integer(dataset$PA)
 
-#Why this does not work?!:  
-#dataset <- dataset %>% as.integer(N, LOC, LOC_prof,
-#           Euthymia, Dysthymia, Depression, Anxiety,
-#           EE, Depersonalization, PA, 
-#           Burnout)
-
 #choose important variables
 dataset <- dataset %>% dplyr::select (Number, Age, Gender, Work_experience, Last_work_experience, 
           Subject, LOC, EE, DP, PA)
@@ -84,6 +72,14 @@ colSums(is.na(dataset))
 
 #general description of the participants
 lapply(dataset[, c("Age", "Gender", "Work_experience", "Last_work_experience", "Subject")], table)
+mean(dataset$Age, na.rm = TRUE)
+sd(dataset$Age, na.rm = TRUE)
+mean(dataset$Work_experience)
+sd(dataset$Work_experience)
+mean(dataset$Last_work_experience, na.rm = TRUE)
+sd(dataset$Last_work_experience, na.rm = TRUE)
+mean(dataset$Work_experience)
+sd(dataset$Work_experience)
 
 #histogram with age and gender
 dataset %>% filter (!is.na(Age)) %>% 
@@ -111,11 +107,6 @@ dataset %>%
   ggplot(aes(Subject)) + 
   geom_bar(alpha = 0.8, position = "stack", fill=wes_palette(n=1, name="Royal1")) + 
   theme_classic()
-
-#Does not work:
-# install.packages("treemap", dependencies = TRUE)
-# library(treemap)
-# treemap(dataset$Subject, index="cat", vSize="pct", vColor="col", type="color")
 
 ## Burnout data
 
@@ -159,7 +150,7 @@ dataset <- dataset %>%
 dataset <- dataset %>% mutate (Burnout = EE_score+DP_score+RPA_score)
 
 #create factor with burnout groups
-dataset <- dataset %>% mutate (Burnout_group = ifelse(Burnout %in% c(3:4), 1, 
+dataset <- dataset %>% mutate (Burnout_group = ifelse(Burnout %in% c(1:4), 1, 
                                                       ifelse(Burnout %in% c(5:6), 2,
                                                              ifelse(Burnout %in% c(7:9), 3, 4))))
 dataset$Burnout_group <- factor(dataset$Burnout_group, 
@@ -206,13 +197,9 @@ dataset %>%
 #view LOC range among participants
 table(dataset$LOC)
 
-#count how many participants are externals in different burnout scores
-xtabs (~ (LOC<22)+ Burnout_group, data=dataset)
-
-#count LOC scores of all participants with high and very high levels of burnout
-high_burnout_dataset <- dataset %>% subset(Burnout_group %in% c("High", "Very_high"))
+#count LOC scores of all participants with middle or higher level of burnout
+high_burnout_dataset <- dataset %>% subset(Burnout_group %in% c("Middle","High", "Very_high"))
 table(high_burnout_dataset$LOC)
-
 
 ### ANALYSIS
 
@@ -308,7 +295,7 @@ dataset_mid_DP_RPA <- dataset %>% filter ((DP_score+RPA_score) %in% c(3:4))
 nrow(dataset_mid_DP_RPA)
 
 #summary of EE, DP and RPA on second stage
-dataset_mid_DP_RPA %>% dplyr::select(EE, DP, RPA) %>% summary()
+dataset_mid_DP_RPA %>% dplyr::select(EE, DP, RPA, Burnout, LOC) %>% summary()
 
 dataset_mid_DP_RPA %>% dplyr::select(EE_score, DP_score, RPA_score) %>% summary()
 
@@ -344,7 +331,7 @@ nrow(dataset_high_DP_RPA)
 nrow(dataset_mid_DP_RPA)
 
 #summary of EE, DP and RPA in 5 and higher levels of DP+RPA
-dataset_high_DP_RPA %>% dplyr::select(EE, DP, RPA) %>% summary()
+dataset_high_DP_RPA %>% dplyr::select(EE, DP, RPA, Burnout, LOC) %>% summary()
 
 #check new subset for normality of EE, DP, RPA and LOC
 
@@ -457,7 +444,7 @@ graph.mod(slopes.mod.high.DP,EE,DP,dataset_high_DP_RPA,
 #LM RPA~EE 
 summary(lm (scale(dataset_high_DP_RPA$RPA, scale=F) ~ scale(dataset_high_DP_RPA$EE, scale=F)))
 
-#cor DP~EE
+#cor RPA~EE
 cor.test(dataset_high_DP_RPA$RPA, dataset_high_DP_RPA$EE, method="pearson")
 
 #plot
@@ -467,7 +454,7 @@ dataset_high_DP_RPA %>%
   geom_smooth(method="lm", color=wes_palette(n=1, name="Royal1")) +
   theme_classic()
 
-#moderation analysis DP~EE*LOC with QuantPsyc
+#moderation analysis RPA~EE*LOC with QuantPsyc
 lm.mod.high.RPA <- moderate.lm(EE, LOC, RPA, dataset_high_DP_RPA, mc=FALSE)
 slopes.mod.high.RPA <- sim.slopes(lm.mod.high.RPA,meanCenter(dataset_high_DP_RPA$LOC))
 summary(lm.mod.high.RPA)
@@ -476,3 +463,92 @@ slopes.mod.high.RPA
 graph.mod(slopes.mod.high.RPA,EE,RPA,dataset_high_DP_RPA,
           title="Interaction in different LOC", xlab="Emotional exhaustion", ylab="Reduction of PA")
 
+dataset_mid_DP_RPA %>% 
+  filter (DP < 7 & LOC < 30)
+
+## Additional. DP~EE*LOC (all participants)
+
+#LM DP~LOC 
+summary(lm (scale(dataset$DP, scale=F) ~ scale(dataset$LOC, scale=F)))
+#plot
+dataset %>%
+  ggplot(aes(x=LOC, y=DP)) + 
+  geom_point(color=wes_palette(n=1, name="Royal1")) +
+  geom_smooth(method="lm", color=wes_palette(n=1, name="Royal1")) +
+  theme_classic()
+
+#LM DP~EE 
+summary(lm (scale(dataset$DP, scale=F) ~ scale(dataset$EE, scale=F)))
+
+#plot
+dataset %>%
+  ggplot(aes(x=EE, y=DP)) + 
+  geom_point(color=wes_palette(n=1, name="Royal1")) +
+  geom_smooth(method="lm", color=wes_palette(n=1, name="Royal1")) +
+  theme_classic()
+
+#moderation analysis DP~EE*LOC with QuantPsyc
+lm.mod.DP <- moderate.lm(EE, LOC, DP, dataset, mc=FALSE)
+slopes.mod.DP <- sim.slopes(lm.mod.DP,meanCenter(dataset$LOC))
+summary(lm.mod.DP)
+slopes.mod.DP
+# when executing hraph.mod use mouse click to place legend
+graph.mod(slopes.mod.DP,EE,DP,dataset,
+          title="Interaction in different LOC", xlab="Emotional exhaustion", ylab="Depersonalization")
+
+##plot DP, LOC and EE
+#DP_LOC_EE <- data.frame (
+#  DP=dataset$DP, 
+#  LOC=dataset$LOC, 
+#  EE=dataset$EE)
+#plot(DP_LOC_EE)
+
+## Additional. RPA~EE*LOC (all participants)
+
+#LM RPA~LOC 
+summary(lm (scale(dataset$RPA, scale=F) ~ scale(dataset$LOC, scale=F)))
+#plot
+dataset %>%
+  ggplot(aes(x=LOC, y=RPA)) + 
+  geom_point(color=wes_palette(n=1, name="Royal1")) +
+  geom_smooth(method="lm", color=wes_palette(n=1, name="Royal1")) +
+  theme_classic()
+
+#LM RPA~EE 
+summary(lm (scale(dataset$RPA, scale=F) ~ scale(dataset$EE, scale=F)))
+
+#plot
+dataset %>%
+  ggplot(aes(x=EE, y=RPA)) + 
+  geom_point(color=wes_palette(n=1, name="Royal1")) +
+  geom_smooth(method="lm", color=wes_palette(n=1, name="Royal1")) +
+  theme_classic()
+
+#moderation analysis DP~EE*LOC with QuantPsyc
+lm.mod.RPA <- moderate.lm(EE, LOC, RPA, dataset, mc=FALSE)
+slopes.mod.RPA <- sim.slopes(lm.mod.RPA,meanCenter(dataset$LOC))
+summary(lm.mod.RPA)
+slopes.mod.RPA
+# when executing hraph.mod use mouse click to place legend
+graph.mod(slopes.mod.RPA,EE,RPA,dataset,
+          title="Interaction in different LOC", xlab="Emotional exhaustion", ylab="Reduction of PA")
+
+##RPA and DP
+#LM RPA~DP 
+summary(lm (scale(dataset$RPA, scale=F) ~ scale(dataset$DP, scale=F)))
+
+#plot
+dataset %>%
+  ggplot(aes(x=DP, y=RPA)) + 
+  geom_point(color=wes_palette(n=1, name="Royal1")) +
+  geom_smooth(method="lm", color=wes_palette(n=1, name="Royal1")) +
+  theme_classic()
+
+#moderation analysis DP~DP*LOC with QuantPsyc
+lm.mod.RPA <- moderate.lm(DP, LOC, RPA, dataset, mc=FALSE)
+slopes.mod.RPA <- sim.slopes(lm.mod.RPA,meanCenter(dataset$LOC))
+summary(lm.mod.RPA)
+slopes.mod.RPA
+# when executing hraph.mod use mouse click to place legend
+graph.mod(slopes.mod.RPA,DP,RPA,dataset,
+          title="Interaction in different LOC", xlab="Depersonalization", ylab="Reduction of PA")
