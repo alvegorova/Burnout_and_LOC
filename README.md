@@ -1,2 +1,4 @@
 # Burnout_and_LOC
-In this study, we investigated the relationships between the Locus of Control and the development of two Emotional Burnout dimensions: Depersonalization and Reduction of Personal Accomplishment. To test our hypotheses we applied Pearson correlation, Linear models, and moderation analysis.
+Many researchers attempted to investigate how the syndrome of emotional burnout develops yet this process remains unclear. Burnout growth is manifested by the increase in its three components: emotional exhaustion (EE),  depersonalization (DP), and reduction of the sense of personal accomplishment (RPA). The model that suggested that these stages progressed as EE → DP and EE → RPA was supported by several studies and not supported by others. 
+
+We hypothesized that one of the personal features of the professional - the locus of control (LOC) - moderates these interactions between burnout symptoms and this moderation effect underlies mixed results presented in other studies using this model. The aim of the present research was to examine interactions between burnout components and the potential moderation effect of LOC on these interactions.
